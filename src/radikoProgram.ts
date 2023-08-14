@@ -14,12 +14,15 @@ const main = async () => {
       input: "station名を入力してください＞",
     });
 
-    const station = searchStation({targetStationName, stations: xml.radiko.stations.station})
+    const station = searchStation({
+      targetStationName,
+      stations: xml.radiko.stations.station,
+    });
     console.log(station);
     console.log(
       createRecCommand({
         stationId: station.$.id,
-        prog: await selectProg({progs: station.progs.prog})
+        prog: await selectProg({ progs: station.progs.prog }),
         // searchPfm({
         //   targetPfm: PFM_NAME,
         //   progs: station.progs.prog,
@@ -30,7 +33,7 @@ const main = async () => {
     console.log(e);
     throw e;
   } finally {
-    readInterface.close()
+    readInterface.close();
   }
 };
 
@@ -42,9 +45,13 @@ const createRecCommand = ({
   stationId: string;
   prog: Prog;
 }): string => {
-  console.log(prog)
+  console.log(prog);
   const commandPrefix = "sudo ./mainRec.sh";
-  return `${commandPrefix} ${stationId} ${prog.$.ft} ${prog.$.dur} ${prog.title}`;
+  // TODO: titleをescapeする
+  return `${commandPrefix} ${stationId} ${prog.$.ft.substring(
+    0,
+    prog.$.ft.length - 2
+  )} ${prog.$.dur.substring(0, prog.$.dur.length - 2)} ${prog.title}`;
 };
 
 // 出演者名で検索をかける
@@ -63,9 +70,9 @@ const searchPfm = ({
   return rtnProgs;
 };
 
-const selectProg = async ({progs}: {progs: Prog[]}): Promise<Prog> => {
+const selectProg = async ({ progs }: { progs: Prog[] }): Promise<Prog> => {
   for (const [key, prog] of Object.entries(progs)) {
-    console.log(`${key}：${prog.title}`)
+    console.log(`${key}：${prog.title}`);
   }
   const targetProgTitle = await readLineConsole({
     input: "titleを入力してください＞",
@@ -73,28 +80,31 @@ const selectProg = async ({progs}: {progs: Prog[]}): Promise<Prog> => {
 
   let targetProgs: Prog[] = [];
   for (const [_key, prog] of Object.entries(progs)) {
-    if(prog.title.includes(targetProgTitle)) {
-      targetProgs.push(prog)
+    if (prog.title.includes(targetProgTitle)) {
+      targetProgs.push(prog);
     }
   }
-  if(targetProgs.length === 1) {
-    return targetProgs[0]
-  } else if(targetProgs.length === 0) {
-    throw new Error("番組を選べませんでした。")
+  if (targetProgs.length === 1) {
+    return targetProgs[0];
+  } else if (targetProgs.length === 0) {
+    throw new Error("番組を選べませんでした。");
   }
 
   const rtnProg = {
     $: {
       ft: targetProgs[0].$.ft,
-      to: targetProgs[targetProgs.length -1].$.to,
-      dur: calcDur({start: targetProgs[0].$.ft, end: targetProgs[targetProgs.length -1].$.to})
+      to: targetProgs[targetProgs.length - 1].$.to,
+      dur: calcDur({
+        start: targetProgs[0].$.ft,
+        end: targetProgs[targetProgs.length - 1].$.to,
+      }),
     },
     title: targetProgs[0].title,
     pfm: targetProgs[0].pfm,
-    info: targetProgs[0].info
-  }
-  return rtnProg
-}
+    info: targetProgs[0].info,
+  };
+  return rtnProg;
+};
 
 // station名の配列を取得する
 const getStationNames = ({ stations }: { stations: Station[] }) => {
@@ -123,12 +133,12 @@ const searchStation = ({
   return rtnStation!;
 };
 
-const calcDur = ({start, end}: {start: string, end: string}): string => {
+const calcDur = ({ start, end }: { start: string; end: string }): string => {
   let midDur = parseInt(end) - parseInt(start);
-  const sec = midDur % 100
-  const min = Math.floor(midDur/100)
-  const hour = Math.floor(midDur/10000)
-  console.log(`calcDur: ${hour}:${min}:${sec}`)
-  return (sec + min * 60 + hour * 60 * 60) + ""
-}
+  const sec = midDur % 100;
+  const min = Math.floor(midDur / 100);
+  const hour = Math.floor(midDur / 10000);
+  console.log(`calcDur: ${hour}:${min}:${sec}`);
+  return sec + min * 60 + hour * 60 * 60 + "";
+};
 main();
